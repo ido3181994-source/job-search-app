@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a56db">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Job Search">
+  <title>Ido's Job Search</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue: #1a56db;
+      --blue-dark: #1e40af;
+      --green: #276749;
+      --green-bg: #f0fff4;
+      --yellow: #744210;
+      --yellow-bg: #fffbeb;
+      --red: #9b2c2c;
+      --red-bg: #fff5f5;
+      --gray: #718096;
+      --border: #e2e8f0;
+      --card-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    html { font-size: 16px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      overscroll-behavior: none;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+      color: white;
+      padding: 16px 16px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(26,86,219,0.3);
+    }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .header-title { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
+    .last-updated { font-size: 11px; opacity: 0.75; }
+    .stats-bar { display: flex; gap: 0; }
+    .stat {
+      flex: 1;
+      text-align: center;
+      padding: 8px 4px 6px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.12);
+    }
+    .stat + .stat { margin-left: 8px; }
+    .stat-num { font-size: 24px; font-weight: 800; line-height: 1; }
+    .stat-label { font-size: 10px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+    /* ── FILTERS ── */
+    .filter-bar {
+      background: white;
+      padding: 10px 12px;
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 108px;
+      z-index: 99;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid #cbd5e0;
+      background: white;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      color: #4a5568;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .filter-btn.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: white;
+    }
+
+    /* ── SORT BAR ── */
+    .sort-bar {
+      padding: 8px 16px;
+      background: #f7fafc;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--gray);
+    }
+    .sort-bar select {
+      font-size: 12px;
+      border: none;
+      background: transparent;
+      color: #4a5568;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+    }
+    .count-label { margin-left: auto; font-weight: 500; }
+
+    /* ── JOB LIST ── */
+    .jobs-list {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      padding-bottom: 32px;
+    }
+
+    /* ── JOB CARD ── */
+    .job-card {
+      background: white;
+      border-radius: 14px;
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+      transition: box-shadow 0.15s, opacity 0.2s;
+    }
+    .job-card.applied { opacity: 0.55; }
+
+    .card-header {
+      padding: 14px 14px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+    }
+    .company-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+      letter-spacing: -0.5px;
+    }
+    .card-title-block { flex: 1; min-width: 0; }
+    .card-role {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a202c;
+      line-height: 1.25;
+      margin-bottom: 2px;
+    }
+    .card-company { font-size: 13px; color: #4a5568; font-weight: 500; }
+    .score-badge {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      border-radius: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+    }
+    .score-num { font-size: 20px; font-weight: 800; line-height: 1; }
+    .score-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; }
+    .tier-a { background: var(--green-bg); color: var(--green); }
+    .tier-b { background: var(--yellow-bg); color: var(--yellow); }
+    .tier-c { background: var(--red-bg); color: var(--red); }
+
+    .card-meta {
+      padding: 10px 14px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11.5px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+    .tag-loc { background: #ebf8ff; color: #2b6cb0; }
+    .tag-work { background: var(--green-bg); color: var(--green); }
+    .tag-lang { background: #faf5ff; color: #553c9a; }
+    .tag-src { background: #f7fafc; color: #718096; }
+
+    .card-why {
+      margin: 10px 14px 0;
+      background: #f7fafc;
+      border-radius: 9px;
+      overflow: hidden;
+    }
+    .why-toggle {
+      padding: 9px 12px;
+      font-size: 12px;
+      color: #4a5568;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .why-arrow { font-size: 10px; transition: transform 0.2s; }
+    .why-arrow.open { transform: rotate(180deg); }
+    .why-body {
+      font-size: 12.5px;
+      color: #4a5568;
+      line-height: 1.55;
+      padding: 0 12px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease, padding 0.25s;
+    }
+    .why-body.open { max-height: 300px; padding: 0 12px 10px; }
+    .stretch {
+      font-size: 11.5px;
+      color: #c05621;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    .card-actions {
+      padding: 12px 14px 14px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn-apply {
+      flex: 1;
+      padding: 11px 16px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      display: block;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-applied {
+      padding: 11px 12px;
+      background: #edf2f7;
+      color: #4a5568;
+      border: none;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-applied.marked { background: var(--green-bg); color: var(--green); }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--gray);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 14px; }
+    .empty-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .empty-sub { font-size: 13px; }
+
+    /* ── SCORE BAR ── */
+    .score-bar-wrap { padding: 0 14px 10px; }
+    .score-bar-bg {
+      height: 4px;
+      background: #e2e8f0;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s;
+    }
+
+    @media (min-width: 600px) {
+      .jobs-list { max-width: 560px; margin: 0 auto; }
+      .filter-bar { justify-content: center; }
+      .sort-bar { max-width: 560px; margin: 0 auto; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="header-title">🎯 Job Search</div>
+    <div class="last-updated" id="lastUpdated">—</div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-label">Matches</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="statTop">0</div>
+      <div class="stat-label">85+ ⭐</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="statNew">0</div>
+      <div class="stat-label">New</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="statApplied">0</div>
+      <div class="stat-label">Applied</div>
+    </div>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="csm">CSM</button>
+  <button class="filter-btn" data-filter="am">AM</button>
+  <button class="filter-btn" data-filter="new">New</button>
+  <button class="filter-btn" data-filter="top">85+</button>
+  <button class="filter-btn" data-filter="not-applied">Not Applied</button>
+  <button class="filter-btn" data-filter="applied">Applied</button>
+</div>
+
+<div class="sort-bar">
+  <span>Sort:</span>
+  <select id="sortSelect">
+    <option value="score">Score ↓</option>
+    <option value="company">Company A–Z</option>
+  </select>
+  <span class="count-label" id="countLabel"></span>
+</div>
+
+<div class="jobs-list" id="jobsList"></div>
+
+<script>
+// ── DATA (regenerated by job search skill after each run) ──
+const DATA = {"last_run":"2026-05-03T11:30:00+03:00","candidate":"Ido Nativ","criteria":{"roles":["Account Manager","Customer Success Manager"],"location":"Tel Aviv & Center","work_model":"Hybrid OK","seniority":"Mid-level (2-5 years)","salary_nis_monthly":[18500,23500],"match_threshold":70},"matches":[{"id":"datadog-csm-tlv-7599421","title":"Customer Success Manager - Tel Aviv","company":"Datadog","location":"Tel Aviv","work_model":"Hybrid","source":"Greenhouse","url":"https://boards.greenhouse.io/datadog/jobs/7599421","score":88,"language":"English","posted":"Active May 2026","why_match":"Direct fit: drive new product attachment and effective relationships across customer base through onboarding, up-selling, cross-selling.","stretch":"SaaS observability domain is new; mitigated by relationship strength and CRM literacy.","key_jd_keywords":["customer success","onboarding","up-selling","cross-selling","relationships","adoption"]},{"id":"monday-mid-market-am-israel","title":"Mid-Market Account Manager - Israel Market","company":"monday.com","location":"Tel Aviv","work_model":"Hybrid","source":"Comeet","url":"https://www.comeet.com/jobs/monday/41.00B/mid-market-account-manager---israel-market/DA.24E","score":87,"language":"Hebrew/English","posted":"Active May 2026","why_match":"Mid-Market AM at monday.com — exact role/seniority/location/language fit. Ido's 4 years of multi-client B2B AM with 3x ARR growth maps cleanly. Hebrew-fluency bonus for Israel Market role.","stretch":"SaaS work-management domain is new but monday.com is well-known to onboard generalists.","key_jd_keywords":["account manager","mid-market","Israel","long-term relationships","renewals","expansion"]},{"id":"redis-csm-hebrew-speaking","title":"Customer Success Manager - Hebrew speaking","company":"Redis","location":"Tel Aviv","work_model":"Hybrid","source":"LinkedIn","url":"https://www.linkedin.com/jobs/search/?keywords=Customer%20Success%20Manager&location=Tel%20Aviv&f_C=3072","score":85,"language":"Hebrew/English","posted":"Active May 2026","why_match":"Hebrew-speaking CSM — Ido's native Hebrew is a direct asset. Redis is a major Israeli-rooted B2B SaaS; CSM scope of customer relationships, retention, expansion fits.","stretch":"Database/infra domain is new; mitigated by Hebrew-language differentiator and relationship strength.","key_jd_keywords":["Hebrew","customer success","B2B","retention","relationships"]},{"id":"similarweb-csm-enterprise-6124872","title":"Customer Success Manager, Enterprise","company":"Similarweb","location":"Tel Aviv","work_model":"Hybrid","source":"Greenhouse","url":"https://boards.greenhouse.io/similarweb/jobs/6124872","score":85,"language":"English","posted":"Active May 2026","why_match":"Enterprise CSM — strategic partner to top enterprise clients. Maps to Mastercard/Intel relationship work and 3x ARR growth.","stretch":"Digital intelligence domain is new; CSM may expect 3+ years pure SaaS.","key_jd_keywords":["enterprise clients","strategic partner","consultative","business value","platform"]},{"id":"datadog-enterprise-csm-tlv-7844421","title":"Enterprise Customer Success Manager - Tel Aviv","company":"Datadog","location":"Tel Aviv","work_model":"Hybrid","source":"Greenhouse + LinkedIn","url":"https://boards.greenhouse.io/datadog/jobs/7844421","score":82,"language":"English","posted":"Active May 2026","why_match":"Strategic partner to largest customers, executive engagement, QBRs. JD requires 3+ years CSM/AM — Ido fits. Confirmed live via LinkedIn + Greenhouse.","stretch":"Heavy emphasis on technical buyers (CTO, VP Engineering, DevOps) — Ido's tech curiosity helps but pure-SaaS infra is new.","key_jd_keywords":["enterprise","strategic partner","QBRs","executive relationships","value delivery","B2B SaaS"]},{"id":"deel-csm-i-israel","title":"Customer Success Manager I","company":"Deel","location":"Israel","work_model":"Hybrid","source":"Ashby","url":"https://jobs.ashbyhq.com/deel/0e64b823-1233-4b06-ba7f-0b5edd41ad35","score":82,"language":"English","posted":"Active May 2026","why_match":"Deel is a global HR/payroll platform; Level-I CSM is the entry/mid tier — exact fit for Ido's 4 years. Multi-client lifecycle ownership matches his Pro Market work.","stretch":"Global remote-payroll domain is new but applies to general B2B accounts.","key_jd_keywords":["customer success","B2B","lifecycle","relationships","global"]},{"id":"monday-enterprise-am-israel","title":"Enterprise Account Manager - Israel Market","company":"monday.com","location":"Tel Aviv","work_model":"Hybrid","source":"Comeet","url":"https://www.comeet.com/jobs/monday/41.00B/enterprise-account-manager---israel-market/E3.D4E","score":80,"language":"Hebrew/English","posted":"Active May 2026","why_match":"Enterprise AM Israel — Ido's enterprise relationship work with Mastercard/Intel and Hebrew fluency are direct assets.","stretch":"Enterprise tier may want 5+ years — Ido at 4 is borderline.","key_jd_keywords":["enterprise","account manager","Israel","relationships","expansion"]},{"id":"walkme-csm-tlv-wellfound","title":"Customer Success Manager","company":"WalkMe","location":"Tel Aviv","work_model":"Hybrid","source":"Wellfound","url":"https://wellfound.com/jobs/3242279-customer-success-manager","score":80,"language":"English","posted":"Active May 2026","why_match":"WalkMe is a major Israeli B2B SaaS (digital adoption platform). CSM scope fits Ido's profile; B2B context similar to his Pro Market enterprise work.","stretch":"DAP / training-platform domain is new.","key_jd_keywords":["customer success","B2B SaaS","adoption","relationships"]},{"id":"similarweb-enterprise-csm-sales-intel-6318406","title":"Enterprise Customer Success Manager, Sales Intelligence","company":"Similarweb","location":"Tel Aviv","work_model":"Hybrid","source":"Greenhouse","url":"https://boards.greenhouse.io/similarweb/jobs/6318406","score":80,"language":"English","posted":"Active May 2026","why_match":"Strategic partner helping customers optimize sales strategies. Ido's strategic advisory experience maps directly.","stretch":"Sales Intelligence vertical is specific.","key_jd_keywords":["strategic partner","sales strategies","platform","enterprise"]},{"id":"monday-csm-comeet","title":"Customer Success Manager","company":"monday.com","location":"Tel Aviv","work_model":"Hybrid","source":"Comeet","url":"https://www.comeet.com/jobs/monday/41.00B/customer-success-manager/B5.167","score":78,"language":"Hebrew/English","posted":"Active May 2026","why_match":"monday.com expanding Customer Success in Israel — generalist CSM with onboarding/implementation focus. Direct fit for Ido's lifecycle ownership.","stretch":"Specific vertical not stated; could be implementation-heavy.","key_jd_keywords":["customer success","implementation","onboarding","Israel"]},{"id":"similarweb-am-mid-market-3279774","title":"Account Manager - Mid Market","company":"Similarweb","location":"Tel Aviv","work_model":"Hybrid","source":"Greenhouse","url":"https://boards.greenhouse.io/similarweb/jobs/3279774","score":78,"language":"English","posted":"Active May 2026","why_match":"Mid-Market AM — fits Ido's 4 years of Account Management with 3x ARR growth.","stretch":"Pure SaaS AM context vs B2B services background.","key_jd_keywords":["account manager","mid-market","renewals","expansion","ARR"]},{"id":"sysaid-am-tlv","title":"Account Manager","company":"SysAid","location":"Tel Aviv","work_model":"Hybrid","source":"LinkedIn","url":"https://www.linkedin.com/jobs/search/?keywords=Account%20Manager&location=Tel%20Aviv","score":77,"language":"English","posted":"Active May 2026","why_match":"Israeli IT-service-management SaaS. AM role at mid-level seniority. LinkedIn's own match scoring flagged Ido's profile as 'high match' for this role.","stretch":"ITSM domain is new.","key_jd_keywords":["account manager","B2B SaaS","renewals","expansion"]},{"id":"humanz-csm-workable","title":"Customer Success Manager (Israeli Clients)","company":"Humanz","location":"Tel Aviv","work_model":"Hybrid","source":"Workable","url":"https://apply.workable.com/humanz/j/770BA00D8B/","score":76,"language":"Hebrew/English","posted":"Active March-May 2026","why_match":"Influencer marketing platform managing Israeli clients — Ido's Hebrew + B2B AM experience fit. Smaller CSM scope is a comfortable on-ramp.","stretch":"Influencer/creator economy domain is new.","key_jd_keywords":["customer success","Israeli clients","Hebrew","relationships"]},{"id":"similarweb-smb-csm-6124880","title":"SMB Customer Success Manager","company":"Similarweb","location":"Tel Aviv","work_model":"Hybrid","source":"Greenhouse","url":"https://boards.greenhouse.io/similarweb/jobs/6124880","score":76,"language":"English","posted":"Active May 2026","why_match":"CSM for SMB clients — easier on-ramp than Enterprise tier, consultative engagement.","stretch":"Salary at SMB tier may be at lower end of range.","key_jd_keywords":["SMB","consultative","analytical","customer success"]},{"id":"etoro-am-comeet","title":"Account Manager","company":"eToro","location":"Israel","work_model":"Hybrid","source":"Comeet","url":"https://www.comeet.com/jobs/etoro/41.009/account-manager/86.343","score":75,"language":"Hebrew/English","posted":"Active May 2026","why_match":"eToro is a major Israeli fintech. AM role fits Ido's B2B account management track. Hebrew bonus.","stretch":"Trading/fintech domain is new.","key_jd_keywords":["account manager","B2B","fintech","relationships"]},{"id":"madlan-csm-comeet","title":"Customer Success Manager","company":"Madlan (Localize)","location":"Tel Aviv","work_model":"Hybrid","source":"Comeet","url":"https://www.comeet.com/jobs/Madlan/33.00F/customer-success-manager/C8.C47","score":74,"language":"Hebrew","posted":"Active May 2026","why_match":"Israeli real-estate platform — Hebrew-first CSM role. Lifecycle ownership fits.","stretch":"Real-estate vertical is new; Hebrew-only role.","key_jd_keywords":["customer success","Israeli","Hebrew","platform"]},{"id":"mobileye-strategic-am","title":"Strategic Account Manager","company":"Mobileye","location":"Tel Aviv","work_model":"Hybrid","source":"LinkedIn","url":"https://www.linkedin.com/jobs/search/?keywords=Account%20Manager&location=Tel%20Aviv","score":73,"language":"English","posted":"Active May 2026","why_match":"Strategic AM at major Israeli auto-tech leader. Stakeholder-mapping and executive-engagement experience transfers.","stretch":"Automotive/ADAS domain is highly technical; less typical fit.","key_jd_keywords":["strategic","account manager","stakeholder","executive"]},{"id":"bidalgo-csm-comeet","title":"Customer Success Manager","company":"Bidalgo","location":"Tel Aviv","work_model":"Hybrid","source":"Comeet","url":"https://www.comeet.com/jobs/bidalgo/22.006/customer-success-manager/D4.613","score":73,"language":"English","posted":"Active May 2026","why_match":"Adtech / user-acquisition platform. CSM lifecycle fits.","stretch":"Performance-marketing domain expects analytical depth.","key_jd_keywords":["customer success","adtech","platform value"]},{"id":"similarweb-am-strategic-agencies-6143159","title":"Account Manager, Strategic Agencies","company":"Similarweb","location":"Tel Aviv","work_model":"Hybrid","source":"Greenhouse","url":"https://boards.greenhouse.io/similarweb/jobs/6143159","score":72,"language":"English","posted":"Active May 2026","why_match":"AM role supporting global agency clients.","stretch":"Agency vertical is specific.","key_jd_keywords":["account manager","strategic","agency clients","global"]},{"id":"airwallex-am-israel","title":"Account Manager - Israel","company":"Airwallex","location":"Tel Aviv","work_model":"Hybrid","source":"LinkedIn","url":"https://www.linkedin.com/jobs/search/?keywords=Account%20Manager&location=Tel%20Aviv","score":72,"language":"English","posted":"Active May 2026","why_match":"Global fintech AM for Israel market. B2B account management with Hebrew bonus.","stretch":"Cross-border-payments fintech is new.","key_jd_keywords":["account manager","Israel","B2B","fintech"]},{"id":"moonactive-vip-am","title":"VIP Account Manager","company":"Moon Active","location":"Tel Aviv","work_model":"Hybrid","source":"Comeet","url":"https://www.comeet.com/jobs/moonactive/A2.00C/vip-account-manager/2E.706","score":71,"language":"English","posted":"Active May 2026","why_match":"Major Israeli mobile gaming co. VIP AM owns relationships with high-spending players — different audience but same relationship-management muscle.","stretch":"Mobile gaming + VIP-player audience is meaningfully different from B2B enterprise.","key_jd_keywords":["VIP","account manager","relationships","engagement"]},{"id":"melio-csm-tlv-4191409003","title":"Customer Success Manager","company":"Melio (B2B Payments)","location":"Tel Aviv","work_model":"Hybrid","source":"Greenhouse","url":"https://boards.greenhouse.io/melio/jobs/4191409003","score":70,"language":"English","posted":"Active May 2026","why_match":"Own client portfolios, cross-functional support and strategy. Lifecycle CSM fit.","stretch":"US small-business audience.","key_jd_keywords":["customer success","client portfolio","cross-functional"]},{"id":"strauss-key-am","title":"Key Account Manager","company":"Strauss Group","location":"Center District","work_model":"Hybrid","source":"LinkedIn","url":"https://www.linkedin.com/jobs/search/?keywords=Account%20Manager&location=Tel%20Aviv","score":70,"language":"Hebrew/English","posted":"Active May 2026","why_match":"Strauss is a major Israeli food/B2B group. Key AM role fits enterprise relationship pattern.","stretch":"FMCG/food domain is different from tech.","key_jd_keywords":["key account manager","B2B","relationships"]}]};
+
+// ── STATE ──
+let applied    = JSON.parse(localStorage.getItem('jsa_applied') || '{}');
+let seen       = JSON.parse(localStorage.getItem('jsa_seen')    || '{}');
+let filter     = 'all';
+let sort       = 'score';
+
+// Mark current IDs as seen (new = not seen before this session)
+const SESSION_KEY = 'jsa_session_' + DATA.last_run;
+const isNewSession = !sessionStorage.getItem(SESSION_KEY);
+const knownIds = JSON.parse(localStorage.getItem('jsa_known') || '[]');
+const newIds = new Set(DATA.matches.map(j => j.id).filter(id => !knownIds.includes(id)));
+if (isNewSession) {
+  sessionStorage.setItem(SESSION_KEY, '1');
+  localStorage.setItem('jsa_known', JSON.stringify(DATA.matches.map(j => j.id)));
+}
+
+// ── HELPERS ──
+const COLORS = ['#1a56db','#7c3aed','#0891b2','#047857','#b45309','#9f1239','#1d4ed8','#0f766e','#b7791f','#c53030'];
+function colorFor(s) {
+  let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % COLORS.length;
+  return COLORS[Math.abs(h)];
+}
+function initials(s) { return s.replace(/[()]/g,'').split(/[\s.]/)[0].slice(0, 2).toUpperCase(); }
+function tierClass(score) { return score >= 85 ? 'tier-a' : score >= 75 ? 'tier-b' : 'tier-c'; }
+function scoreBarColor(score) { return score >= 85 ? '#38a169' : score >= 75 ? '#d97706' : '#e53e3e'; }
+
+// ── RENDER ──
+function render() {
+  let matches = [...DATA.matches];
+
+  // Filter
+  matches = matches.filter(j => {
+    const t = j.title.toLowerCase();
+    if (filter === 'csm')        return t.includes('customer success');
+    if (filter === 'am')         return t.includes('account manager');
+    if (filter === 'new')        return newIds.has(j.id);
+    if (filter === 'top')        return j.score >= 85;
+    if (filter === 'applied')    return !!applied[j.id];
+    if (filter === 'not-applied') return !applied[j.id];
+    return true;
+  });
+
+  // Sort
+  if (sort === 'score')   matches.sort((a, b) => b.score - a.score);
+  else                    matches.sort((a, b) => a.company.localeCompare(b.company));
+
+  // Count
+  document.getElementById('countLabel').textContent = matches.length + ' job' + (matches.length !== 1 ? 's' : '');
+
+  const list = document.getElementById('jobsList');
+
+  if (!matches.length) {
+    list.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">No matches</div>
+        <div class="empty-sub">Try a different filter</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = matches.map(j => {
+    const isApplied = !!applied[j.id];
+    const isNew = newIds.has(j.id);
+    const tc = tierClass(j.score);
+    const barW = Math.round(((j.score - 70) / 30) * 100);
+    const srcShort = j.source.split(' ')[0].replace(/[—-].*/, '').trim();
+
+    return `
+    <div class="job-card ${isApplied ? 'applied' : ''}" id="card-${j.id}">
+      <div class="card-header">
+        <div class="company-icon" style="background:${colorFor(j.company)}">${initials(j.company)}</div>
+        <div class="card-title-block">
+          <div class="card-role">${isNew ? '🆕 ' : ''}${j.title}</div>
+          <div class="card-company">${j.company}</div>
+        </div>
+        <div class="score-badge ${tc}">
+          <div class="score-num">${j.score}</div>
+          <div class="score-lbl">match</div>
+        </div>
+      </div>
+      <div class="score-bar-wrap" style="padding:6px 14px 0">
+        <div class="score-bar-bg">
+          <div class="score-bar-fill" style="width:${barW}%;background:${scoreBarColor(j.score)}"></div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <span class="tag tag-loc">📍 ${j.location}</span>
+        <span class="tag tag-work">${j.work_model}</span>
+        ${j.language ? `<span class="tag tag-lang">🗣️ ${j.language}</span>` : ''}
+        <span class="tag tag-src">${srcShort}</span>
+      </div>
+      <div class="card-why">
+        <div class="why-toggle" onclick="toggleWhy('${j.id}')">
+          <span>Why I match</span>
+          <span class="why-arrow" id="arr-${j.id}">▼</span>
+        </div>
+        <div class="why-body" id="why-${j.id}">
+          ${j.why_match}
+          ${j.stretch ? `<div class="stretch">⚠️ ${j.stretch}</div>` : ''}
+        </div>
+      </div>
+      <div class="card-actions">
+        <a class="btn-apply" href="${j.url}" target="_blank" rel="noopener noreferrer">Apply →</a>
+        <button class="btn-applied ${isApplied ? 'marked' : ''}" onclick="toggleApplied('${j.id}')">
+          ${isApplied ? '✓ Applied' : 'Mark Applied'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateStats();
+}
+
+function toggleWhy(id) {
+  const body = document.getElementById('why-' + id);
+  const arr  = document.getElementById('arr-' + id);
+  body.classList.toggle('open');
+  arr.classList.toggle('open');
+}
+
+function toggleApplied(id) {
+  if (applied[id]) delete applied[id];
+  else applied[id] = Date.now();
+  localStorage.setItem('jsa_applied', JSON.stringify(applied));
+  render();
+}
+
+function updateStats() {
+  const all = DATA.matches;
+  document.getElementById('statTotal').textContent   = all.length;
+  document.getElementById('statTop').textContent     = all.filter(j => j.score >= 85).length;
+  document.getElementById('statNew').textContent     = newIds.size;
+  document.getElementById('statApplied').textContent = Object.keys(applied).filter(id => all.find(j => j.id === id)).length;
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filter = btn.dataset.filter;
+    render();
+  });
+});
+
+document.getElementById('sortSelect').addEventListener('change', e => {
+  sort = e.target.value;
+  render();
+});
+
+// Last updated
+if (DATA.last_run) {
+  const d = new Date(DATA.last_run);
+  document.getElementById('lastUpdated').textContent =
+    'Updated ' + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) +
+    ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+render();
+</script>
+</body>
+</html>
