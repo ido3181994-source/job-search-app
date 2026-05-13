@@ -84,14 +84,16 @@ Merge, dedupe by URL, remove dead. Update `last_run`. Cap at 30 highest-scoring.
 ## Step 8: Generate tailored CVs for new matches
 Save to `D:\CV's\IdoNativ_CV_<Company>_<Role>.html` using the styled template (same blue accent as original CV — print-to-PDF ready). Apply no-fabrication rules from `references/cv-tailoring.md`.
 
-## Step 9: Update the mobile app and push to GitHub Pages
+## Step 9: Update the cowork artifact AND push to GitHub Pages
 
-Run this command exactly:
+**9a.** Update the cowork artifact as usual (call `mcp__cowork__update_artifact` with id `ido-job-search`).
+
+**9b.** Immediately after — this step is MANDATORY — run the following command to push the same data to the mobile GitHub Pages app:
 ```
 powershell -ExecutionPolicy Bypass -File "C:\Users\USER\Documents\Claude\Scheduled\ido-job-search-3x-daily\update_app.ps1"
 ```
 
-This script reads the updated `job_matches.json`, embeds it into `index.html`, and pushes to GitHub Pages automatically. The live app will update within ~1 minute at: https://ido3181994-source.github.io/job-search-app
+The script reads the data directly from the cowork artifact file, embeds it into the mobile app, and pushes to GitHub Pages. Do not skip this step. The live mobile app is at: https://ido3181994-source.github.io/job-search-app
 
 ## Step 10: Notify
 Concise summary: new matches by score band, dead listings removed, top 3 by score, and any sources you couldn't access.
