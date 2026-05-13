@@ -86,24 +86,12 @@ Save to `D:\CV's\IdoNativ_CV_<Company>_<Role>.html` using the styled template (s
 
 ## Step 9: Update the mobile app and push to GitHub Pages
 
-Read `C:\Users\USER\Documents\Claude\Scheduled\ido-job-search-3x-daily\index.html`.
-
-Replace the `const DATA = {...};` block (the single line starting with `const DATA =`) with the current contents of `D:\CV's\job_matches.json`, formatted as:
+Run this command exactly:
 ```
-const DATA = <job_matches_json_content>;
+powershell -ExecutionPolicy Bypass -File "C:\Users\USER\Documents\Claude\Scheduled\ido-job-search-3x-daily\update_app.ps1"
 ```
 
-Write the updated file back to `C:\Users\USER\Documents\Claude\Scheduled\ido-job-search-3x-daily\index.html`.
-
-Then run these git commands in that directory:
-```
-cd "C:\Users\USER\Documents\Claude\Scheduled\ido-job-search-3x-daily"
-git add index.html
-git commit -m "Job search update <last_run timestamp>"
-git push origin main
-```
-
-The live app will be available at: https://ido3181994-source.github.io/job-search-app
+This script reads the updated `job_matches.json`, embeds it into `index.html`, and pushes to GitHub Pages automatically. The live app will update within ~1 minute at: https://ido3181994-source.github.io/job-search-app
 
 ## Step 10: Notify
 Concise summary: new matches by score band, dead listings removed, top 3 by score, and any sources you couldn't access.
