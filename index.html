@@ -641,7 +641,7 @@
         <button class="filter-btn" data-filter="csm">CSM</button>
         <button class="filter-btn" data-filter="am">AM</button>
         <button class="filter-btn" data-filter="new">New</button>
-        <button class="filter-btn" data-filter="top">85+</button>
+        <button class="filter-btn" data-filter="top">90+</button>
         <button class="filter-btn" data-filter="not-applied">Not Applied</button>
         <button class="filter-btn" data-filter="applied">Applied</button>
       </div>
@@ -1057,22 +1057,47 @@ const DATA = {
   ]
 };
 
+// ── HELPERS ──
+// Stable ID: prefer j.id (old format), else derive from URL
+function jId(j) {
+  if (j.id) return j.id;
+  return btoa(j.url).replace(/[^a-zA-Z0-9]/g, '').slice(0, 32);
+}
+
+function initials(s) { return s.replace(/[()]/g, '').split(/[\s.]/)[0].slice(0, 2).toUpperCase(); }
+
+// Strip "(Hybrid)" / "(On-site)" suffix that cowork embeds in location
+function cleanLocation(loc) { return (loc || '').replace(/\s*\(.*?\)\s*$/, '').trim(); }
+
+// Capitalise source label (cowork uses lowercase: "comeet", "greenhouse" etc.)
+function srcLabel(s) { return (s || '').split(/[—+]/)[0].trim().replace(/^\w/, c => c.toUpperCase()); }
+
+// Bar width: 70–100 range maps to 0–100%
+function barWidth(score) { return Math.min(100, Math.round(((score - 70) / 30) * 100)); }
+
+// "New" detection: use added field if present, else fall back to localStorage
+const runDate = DATA.last_run ? new Date(DATA.last_run) : new Date();
+runDate.setHours(0, 0, 0, 0);
+const cutoff = new Date(runDate);
+cutoff.setDate(cutoff.getDate() - 1); // jobs added within last ~24h of run date
+
+function isNew(j) {
+  if (j.added) return new Date(j.added) >= cutoff;
+  const knownIds = JSON.parse(localStorage.getItem('jsa_known') || '[]');
+  return !knownIds.includes(jId(j));
+}
+
+// Persist known IDs after first load so next visit shows correct New count
+const sessionKey = 'jsa_session_' + (DATA.last_run || '');
+if (!sessionStorage.getItem(sessionKey)) {
+  sessionStorage.setItem(sessionKey, '1');
+  localStorage.setItem('jsa_known', JSON.stringify(DATA.matches.map(jId)));
+}
+
 // ── STATE ──
 let applied = JSON.parse(localStorage.getItem('jsa_applied') || '{}');
 let filter  = 'all';
 let sort    = 'score';
-
-const knownIds  = JSON.parse(localStorage.getItem('jsa_known') || '[]');
-const newIds    = new Set(DATA.matches.map(j => j.id).filter(id => !knownIds.includes(id)));
-const sessionKey = 'jsa_session_' + DATA.last_run;
-if (!sessionStorage.getItem(sessionKey)) {
-  sessionStorage.setItem(sessionKey, '1');
-  localStorage.setItem('jsa_known', JSON.stringify(DATA.matches.map(j => j.id)));
-}
-
-// ── HELPERS ──
-function initials(s) { return s.replace(/[()]/g, '').split(/[\s.]/)[0].slice(0, 2).toUpperCase(); }
-function barWidth(score) { return Math.round(((score - 70) / 30) * 100); }
 
 // ── RENDER ──
 function render() {
@@ -1080,12 +1105,13 @@ function render() {
 
   matches = matches.filter(j => {
     const t = j.title.toLowerCase();
-    if (filter === 'csm')         return t.includes('customer success');
+    const id = jId(j);
+    if (filter === 'csm')         return t.includes('customer success') || t.includes('csm');
     if (filter === 'am')          return t.includes('account manager');
-    if (filter === 'new')         return newIds.has(j.id);
-    if (filter === 'top')         return j.score >= 85;
-    if (filter === 'applied')     return !!applied[j.id];
-    if (filter === 'not-applied') return !applied[j.id];
+    if (filter === 'new')         return isNew(j);
+    if (filter === 'top')         return j.score >= 90;
+    if (filter === 'applied')     return !!applied[jId(j)];
+    if (filter === 'not-applied') return !applied[jId(j)];
     return true;
   });
 
@@ -1103,22 +1129,28 @@ function render() {
         <div class="empty-title">No results</div>
         <p>Try a different filter</p>
       </div>`;
+    updateStats();
     return;
   }
 
   list.innerHTML = matches.map(j => {
-    const isApplied = !!applied[j.id];
-    const isNew     = newIds.has(j.id);
-    const tier      = j.score >= 85 ? 'tier-high' : 'tier-medium';
-    const src       = j.source.split(/[—+]/)[0].trim();
+    const id        = jId(j);
+    const isApplied = !!applied[id];
+    const jobIsNew  = isNew(j);
+    const tier      = j.score >= 90 ? 'tier-high' : 'tier-medium';
+    // Support both schemas: cowork uses work_mode, old uses work_model
+    const workMode  = j.work_mode || j.work_model || '';
+    // notes (cowork) or why_match (old)
+    const whyText   = j.notes || j.why_match || '';
+    const location  = cleanLocation(j.location);
 
     return `
-    <article class="job-card ${tier}${isApplied ? ' applied' : ''}" id="card-${j.id}">
+    <article class="job-card ${tier}${isApplied ? ' applied' : ''}" id="card-${id}">
 
       <div class="card-head">
         <div class="company-mark">${initials(j.company)}</div>
         <div class="card-identity">
-          <div class="card-role">${j.title}${isNew ? '<span class="new-badge">New</span>' : ''}</div>
+          <div class="card-role">${j.title}${jobIsNew ? '<span class="new-badge">New</span>' : ''}</div>
           <div class="card-company">${j.company}</div>
         </div>
         <div class="score-block">
@@ -1134,24 +1166,25 @@ function render() {
       </div>
 
       <div class="card-tags">
-        <span class="tag">${j.location}</span>
-        <span class="tag">${j.work_model}</span>
+        <span class="tag">${location}</span>
+        ${workMode ? `<span class="tag">${workMode}</span>` : ''}
         ${j.language ? `<span class="tag">${j.language}</span>` : ''}
-        <span class="tag">${src}</span>
+        <span class="tag">${srcLabel(j.source)}</span>
       </div>
 
+      ${whyText ? `
       <div class="card-why">
-        <button class="why-toggle" onclick="toggleWhy('${j.id}')" id="toggle-${j.id}">
+        <button class="why-toggle" onclick="toggleWhy('${id}')" id="toggle-${id}">
           <span>Why I match</span>
-          <svg class="why-chevron" id="chev-${j.id}" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg class="why-chevron" id="chev-${id}" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <div class="why-body" id="why-${j.id}">
-          ${j.why_match}
+        <div class="why-body" id="why-${id}">
+          ${whyText}
           ${j.stretch ? `<div class="why-stretch">${j.stretch}</div>` : ''}
         </div>
-      </div>
+      </div>` : ''}
 
       <div class="card-actions">
         <a class="btn-apply" href="${j.url}" target="_blank" rel="noopener noreferrer">
@@ -1160,7 +1193,7 @@ function render() {
             <path d="M1.5 9.5L9.5 1.5M9.5 1.5H3.5M9.5 1.5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </a>
-        <button class="btn-applied${isApplied ? ' marked' : ''}" onclick="toggleApplied('${j.id}')">
+        <button class="btn-applied${isApplied ? ' marked' : ''}" onclick="toggleApplied('${id}')">
           ${isApplied ? 'Applied' : 'Mark applied'}
         </button>
       </div>
@@ -1174,6 +1207,7 @@ function render() {
 function toggleWhy(id) {
   const body = document.getElementById('why-' + id);
   const chev = document.getElementById('chev-' + id);
+  if (!body) return;
   const open = body.classList.toggle('open');
   chev.classList.toggle('open', open);
 }
@@ -1186,11 +1220,13 @@ function toggleApplied(id) {
 }
 
 function updateStats() {
-  const all = DATA.matches;
+  const all      = DATA.matches;
+  const newCount = all.filter(isNew).length;
+  const appCount = Object.keys(applied).filter(id => all.find(j => jId(j) === id)).length;
   document.getElementById('statTotal').textContent   = all.length;
-  document.getElementById('statTop').textContent     = all.filter(j => j.score >= 85).length;
-  document.getElementById('statNew').textContent     = newIds.size;
-  document.getElementById('statApplied').textContent = Object.keys(applied).filter(id => all.find(j => j.id === id)).length;
+  document.getElementById('statTop').textContent     = all.filter(j => j.score >= 90).length;
+  document.getElementById('statNew').textContent     = newCount;
+  document.getElementById('statApplied').textContent = appCount;
 }
 
 // Filters
@@ -1199,7 +1235,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     filter = btn.dataset.filter;
-    // Close sidebar on mobile after selection
     if (window.innerWidth < 768) closeSidebar();
     render();
   });
