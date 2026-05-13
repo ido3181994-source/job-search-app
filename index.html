@@ -684,7 +684,7 @@ const DATA = {"last_run":"2026-05-13T11:00:00Z","run_note":"Run #4 (2026-05-13).
 // Stable ID: prefer j.id (old format), else derive from URL
 function jId(j) {
   if (j.id) return j.id;
-  return btoa(j.url).replace(/[^a-zA-Z0-9]/g, '').slice(0, 32);
+  return 'j' + btoa(j.url).replace(/[^a-zA-Z0-9]/g, '');
 }
 
 function initials(s) { return s.replace(/[()]/g, '').split(/[\s.]/)[0].slice(0, 2).toUpperCase(); }
