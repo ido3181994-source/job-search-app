@@ -21,8 +21,9 @@ $obj        = $jsonStr | ConvertFrom-Json
 $singleLine = $obj | ConvertTo-Json -Depth 10 -Compress
 
 # ── Embed into index.html ────────────────────────────────────────────────────
+# Use multiline+dotall regex so it replaces both single-line and multi-line DATA blocks
 $html = Get-Content $indexFile -Raw -Encoding UTF8
-$html = $html -replace '(?m)^const DATA = .+;$', "const DATA = $singleLine;"
+$html = [regex]::Replace($html, '(?ms)^const DATA = .+?;$', "const DATA = $singleLine;")
 Set-Content -Path $indexFile -Value $html -Encoding UTF8 -NoNewline
 
 # ── Commit and push ──────────────────────────────────────────────────────────
